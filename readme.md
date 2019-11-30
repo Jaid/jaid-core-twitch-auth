@@ -1,3 +1,3 @@
-# jaid-core-twitch-auth
-## Under construction
-Not much to see right now. Come back lator! :crocodile:
+## jaid-core-twitch-auth
+
+
