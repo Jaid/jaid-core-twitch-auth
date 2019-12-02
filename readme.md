@@ -3,6 +3,15 @@
 
 jaid-core plugin for TwitchTV based logins.
 
+## Installation
+<a href='https://npmjs.com/package/jaid-core-twitch-auth'><img alt='npm logo' src='https://raw.githubusercontent.com/npm/logos/master/npm%20logo/npm-logo-red.png' height=16/></a>
+```bash
+npm install --save jaid-core-twitch-auth@^
+```
+<a href='https://yarnpkg.com/package/jaid-core-twitch-auth'><img alt='Yarn logo' src='https://raw.githubusercontent.com/yarnpkg/assets/master/yarn-kitten-full.png' height=24/></a>
+```bash
+yarn add jaid-core-twitch-auth@^
+```
 
 
 ## Try it out
