@@ -4,31 +4,16 @@
 jaid-core plugin for TwitchTV based logins.
 
 ## Installation
-<a href='https://npmjs.com/package/jaid-core-twitch-auth'><img alt='npm logo' src='https://raw.githubusercontent.com/npm/logos/master/npm%20logo/npm-logo-red.png' height=16/></a>
+<a href='https://npmjs.com/package/jaid-core-twitch-auth'><img alt='npm logo' src='https://github.com/Jaid/action-readme/raw/master/images/base-assets/npm.png'/></a>
 ```bash
-npm install --save jaid-core-twitch-auth@^
+npm install --save jaid-core-twitch-auth@^0.1.0
 ```
-<a href='https://yarnpkg.com/package/jaid-core-twitch-auth'><img alt='Yarn logo' src='https://raw.githubusercontent.com/yarnpkg/assets/master/yarn-kitten-full.png' height=24/></a>
+<a href='https://yarnpkg.com/package/jaid-core-twitch-auth'><img alt='Yarn logo' src='https://github.com/Jaid/action-readme/raw/master/images/base-assets/yarn.png'/></a>
 ```bash
-yarn add jaid-core-twitch-auth@^
+yarn add jaid-core-twitch-auth@^0.1.0
 ```
 
 
-## Try it out
-Open a browser's JavaScript console and execute:
-
-```javascript
-const scriptElement = document.createElement("script");
-scriptElement.setAttribute("type","text/javascript");
-scriptElement.setAttribute("src","https://unpkg.com/@0.1.0");
-document.querySelector("head").appendChild(scriptElement);
-```
-
-The module is now loaded in a variable.
-
-```javascript
-typeof .default
-```
 
 ## Documentation
 **Kind**: Exported function  
