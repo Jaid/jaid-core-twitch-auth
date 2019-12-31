@@ -1,5 +1,6 @@
 {
   "private": true,
+  "name": "jaid-core-twitch-auth",
   "webpackConfigJaid": "universalLib",
   "version": "0.1.0",
   "author": "Jaid <jaid.jsx@gmail.com> (https://github.com/Jaid)",
