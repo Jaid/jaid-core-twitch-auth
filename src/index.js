@@ -1,10 +1,13 @@
 /** @module jaid-core-twitch-auth */
 
 import Router from "@koa/router"
-import {KoaPassport} from "koa-passport"
-import {Strategy as TwitchStrategy} from "passport-twitch-new"
-import {isString} from "lodash"
+import EventEmitter from "events"
+import {JaidCorePlugin} from "jaid-core"
 import koaBodyparser from "koa-bodyparser"
+import {KoaPassport} from "koa-passport"
+import {isString} from "lodash"
+import {Strategy as TwitchStrategy} from "passport-twitch-new"
+
 import TwitchUser from "src/models/TwitchUser"
 
 import indexTemplate from "./auth.hbs"
@@ -15,7 +18,7 @@ import indexTemplate from "./auth.hbs"
  * @prop {string} domain
  */
 
-export default class TwitchAuthPlugin {
+export default class TwitchAuthPlugin extends JaidCorePlugin {
 
   /**
    * @type {string}
@@ -33,10 +36,16 @@ export default class TwitchAuthPlugin {
   callbackUrl = null
 
   /**
+   * @type {EventEmitter}
+   */
+  eventEmitter = new EventEmitter
+
+  /**
    * @constructor
    * @param {Options} options
    */
   constructor(options = {}) {
+    super()
     this.options = {
       scope: [],
       domain: null,
@@ -80,27 +89,44 @@ export default class TwitchAuthPlugin {
    * @param {Function} done
    */
   async verify(accessToken, refreshToken, profile, done) {
-    await TwitchUser.upsert({
-      accessToken,
-      refreshToken,
-      broadcasterType: profile.broadcaster_type,
-      description: profile.description,
-      displayName: profile.display_name,
-      twitchId: profile.id,
-      loginName: profile.login,
-      offlineImageUrl: profile.offline_image_url,
-      avatarUrl: profile.profile_image_url,
-      viewCount: profile.view_count,
+    let twitchUser = await TwitchUser.findByTwitchId(profile.id)
+    let isNew
+    if (twitchUser) {
+      this.log(`Login from existing Twitch user ${profile.login}`)
+      isNew = false
+      await twitchUser.update({
+        accessToken,
+        refreshToken,
+      })
+    } else {
+      this.log(`Login from new Twitch user ${profile.login}`)
+      isNew = true
+      twitchUser = TwitchUser.build({
+        accessToken,
+        refreshToken,
+        broadcasterType: profile.broadcaster_type,
+        description: profile.description,
+        displayName: profile.display_name,
+        twitchId: profile.id,
+        loginName: profile.login,
+        offlineImageUrl: profile.offline_image_url,
+        avatarUrl: profile.profile_image_url,
+        viewCount: profile.view_count,
+      })
+      await twitchUser.save()
+    }
+    this.eventEmitter.emit("login", {
+      twitchUser,
+      isNew,
     })
-    console.log("Login from Twitch user %s", profile.login)
     done()
   }
 
-  // collectModels() {
-  //   return {
-  //     TwitchUser,
-  //   }
-  // }
+  collectModels() {
+    return {
+      TwitchUser: require("src/models/TwitchUser"),
+    }
+  }
 
   /**
    * @param {import("koa")} koa

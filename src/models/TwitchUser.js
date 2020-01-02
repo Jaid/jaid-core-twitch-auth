@@ -14,7 +14,7 @@ class TwitchUser extends Sequelize.Model {
    * @param {string} twitchId
    * @return {Promise<TwitchUser>}
    */
-  static async getByTwitchId(twitchId) {
+  static async findByTwitchId(twitchId) {
     const user = await TwitchUser.findOne({
       where: {twitchId},
     })
@@ -25,7 +25,7 @@ class TwitchUser extends Sequelize.Model {
    * @param {string} twitchLogin
    * @return {Promise<TwitchUser>}
    */
-  static async getByTwitchLogin(twitchLogin) {
+  static async findByTwitchLogin(twitchLogin) {
     const user = await TwitchUser.findOne({
       where: {
         loginName: twitchLogin.toLowerCase(),

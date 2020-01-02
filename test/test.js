@@ -1,10 +1,9 @@
-import path from "path"
-
 import fsp from "@absolunet/fsp"
 import delay from "delay"
 import getPort from "get-port"
 import JaidCore from "jaid-core"
 import ms from "ms.macro"
+import path from "path"
 
 const indexModule = (process.env.MAIN ? path.resolve(process.env.MAIN) : path.join(__dirname, "..", "src")) |> require
 
@@ -15,7 +14,7 @@ const {default: Plugin} = indexModule
 
 it("should run", async () => {
   let authHomepageResponse
-  const insecurePort = await getPort()
+  const insecurePort = 51402
   const twitchAuthPlugin = new Plugin()
   const core = new JaidCore({
     insecurePort,
@@ -25,8 +24,14 @@ it("should run", async () => {
     useGot: true,
     sqlite: true,
   })
+  const configFile = path.join(core.appFolder, "config.yml")
+  await fsp.writeYaml(configFile, {
+    twitchClientId: process.env.jaidCoreTwitchAuthClientId,
+    twitchClientCallbackUrl: `http://localhost:${insecurePort}/auth/twitch/callback`,
+  })
   const secretsFile = path.join(core.appFolder, "secrets.yml")
   await fsp.writeYaml(secretsFile, {
+    twitchClientSecret: process.env.jaidCoreTwitchAuthClientSecret,
   })
   const testClientClass = class {
 
@@ -47,10 +52,23 @@ it("should run", async () => {
 
   }
   await core.init({
-    dashboard: twitchAuthPlugin,
+    twitchAuth: twitchAuthPlugin,
     test: testClientClass,
   })
-  await delay(ms`30 seconds`)
+  await delay(ms`3 seconds`)
   expect(authHomepageResponse.statusCode).toBe(200)
+  if (process.env.GITHUB_WORKFLOW) {
+    // If in CI, there is no chance to log in, so stop testing here
+    await core.close()
+    return
+  }
+  let loginCalled = false
+  twitchAuthPlugin.eventEmitter.on("login", ({twitchUser, isNew}) => {
+    expect(isNew).toBeTruthy()
+    expect(twitchUser.displayName).toBe("Jaidchen")
+    loginCalled = true
+  })
+  await delay(ms`30 seconds`)
   await core.close()
+  expect(loginCalled).toBeTruthy()
 }, ms`40 seconds`)
