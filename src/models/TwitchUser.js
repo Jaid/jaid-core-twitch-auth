@@ -10,6 +10,20 @@ import twitchChatClient from "twitch-chat-client"
 
 class TwitchUser extends Sequelize.Model {
 
+  static associate(models) {
+    console.log("TwitchUser ", Object.keys(models))
+    TwitchUser.hasMany(models.TwitchLogin, {
+      foreignKey: {
+        allowNull: false,
+      },
+    })
+    TwitchUser.hasMany(models.TwitchProfileChange, {
+      foreignKey: {
+        allowNull: false,
+      },
+    })
+  }
+
   /**
    * @param {string} twitchId
    * @return {Promise<TwitchUser>}
@@ -129,6 +143,32 @@ class TwitchUser extends Sequelize.Model {
   }
 
   /**
+   * @typedef {Object} CreateFromLoginResult
+   */
+
+  /**
+   * @param {string} accessToken
+   * @param {string} refreshToken
+   * @param {Object} profile
+   * @return {Promise<CreateFromLoginResult>}
+   */
+  static async createFromLogin(accessToken, refreshToken, profile) {
+    const twitchUser = TwitchUser.build({
+      accessToken,
+      refreshToken,
+      broadcasterType: profile.broadcaster_type,
+      description: profile.description,
+      displayName: profile.display_name,
+      twitchId: profile.id,
+      loginName: profile.login,
+      offlineImageUrl: profile.offline_image_url,
+      avatarUrl: profile.profile_image_url,
+      viewCount: profile.view_count,
+    })
+    const twitchLogin = {}
+  }
+
+  /**
    * @return {Promise<import("twitch").default>}
    */
   async toTwitchClient() {
@@ -190,7 +230,7 @@ class TwitchUser extends Sequelize.Model {
 }
 
 /**
- * @type {import("sequelize").}
+ * @type {import("sequelize").ModelAttributes}
  */
 export const schema = {
   broadcasterType: Sequelize.STRING(16),

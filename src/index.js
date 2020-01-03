@@ -8,6 +8,8 @@ import {KoaPassport} from "koa-passport"
 import {isString} from "lodash"
 import {Strategy as TwitchStrategy} from "passport-twitch-new"
 
+import TwitchLogin from "src/models/TwitchLogin"
+import TwitchProfileChange from "src/models/TwitchProfileChange"
 import TwitchUser from "src/models/TwitchUser"
 
 import indexTemplate from "./auth.hbs"
@@ -87,33 +89,22 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
    * @param {string} refreshToken
    * @param {Object} profile
    * @param {Function} done
+   * @return {Promise<void>}
    */
   async verify(accessToken, refreshToken, profile, done) {
     let twitchUser = await TwitchUser.findByTwitchId(profile.id)
-    let isNew
-    if (twitchUser) {
+    const isNew = !twitchUser
+    if (isNew) {
+      this.log(`Login from new Twitch user ${profile.login}`)
+      const createTwitchUserResult = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
+      twitchUser = createTwitchUserResult.twitchUser
+      await twitchUser.save()
+    } else {
       this.log(`Login from existing Twitch user ${profile.login}`)
-      isNew = false
       await twitchUser.update({
         accessToken,
         refreshToken,
       })
-    } else {
-      this.log(`Login from new Twitch user ${profile.login}`)
-      isNew = true
-      twitchUser = TwitchUser.build({
-        accessToken,
-        refreshToken,
-        broadcasterType: profile.broadcaster_type,
-        description: profile.description,
-        displayName: profile.display_name,
-        twitchId: profile.id,
-        loginName: profile.login,
-        offlineImageUrl: profile.offline_image_url,
-        avatarUrl: profile.profile_image_url,
-        viewCount: profile.view_count,
-      })
-      await twitchUser.save()
     }
     this.eventEmitter.emit("login", {
       twitchUser,
@@ -123,9 +114,15 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
   }
 
   collectModels() {
-    return {
-      TwitchUser: require("src/models/TwitchUser"),
+    const modelsRequire = require.context("./models/", false)
+    const models = {}
+    for (const entry of modelsRequire.keys()) {
+      const modelName = entry.match(/\.\/(?<key>[\da-z]+)/i).groups.key
+      const model = require(`./models/${modelName}.js`)
+      model.default.plugin = this
+      models[modelName] = model
     }
+    return models
   }
 
   /**
