@@ -1,6 +1,5 @@
 import fsp from "@absolunet/fsp"
 import delay from "delay"
-import getPort from "get-port"
 import JaidCore from "jaid-core"
 import ms from "ms.macro"
 import open from "open"
@@ -16,7 +15,9 @@ const {default: Plugin} = indexModule
 it("should run", async () => {
   let authHomepageResponse
   const insecurePort = 51402
-  const twitchAuthPlugin = new Plugin()
+  const twitchAuthPlugin = new Plugin({
+    failureRedirect: "/failure",
+  })
   const core = new JaidCore({
     insecurePort,
     name: _PKG_TITLE,
@@ -70,7 +71,27 @@ it("should run", async () => {
     expect(twitchUser.displayName).toBe("Jaidchen")
     loginCalled = true
   })
-  await delay(ms`30 seconds`)
+  await delay(ms`10 seconds`)
+  const [twitchUsers, twitchTokens, twitchLogins] = await Promise.all([
+    core.database.models.TwitchUser.findAll(),
+    core.database.models.TwitchToken.findAll(),
+    core.database.models.TwitchLogin.findAll(),
+  ])
+  expect(twitchUsers.length).toBe(1)
+  expect(twitchTokens.length).toBe(1)
+  expect(twitchLogins).toMatchObject([
+    {
+      id: 1,
+      ip: "::1",
+    },
+  ])
+  const twitchUser = twitchUsers[0]
+  /**
+   * @type {import("twitch").default}
+   */
+  const apiClient = await twitchUser.toTwitchClient()
+  const profile = await apiClient.helix.users.getUserByName("jaidchen")
+  expect(profile.displayName).toBe("Jaidchen")
   await core.close()
   expect(loginCalled).toBeTruthy()
 }, ms`40 seconds`)

@@ -1,12 +1,12 @@
 /** @module jaid-core-twitch-auth */
 
 import Router from "@koa/router"
+import {Strategy as TwitchStrategy} from "@oauth-everything/passport-twitch"
 import EventEmitter from "events"
 import {JaidCorePlugin} from "jaid-core"
 import koaBodyparser from "koa-bodyparser"
 import {KoaPassport} from "koa-passport"
 import {isString} from "lodash"
-import {Strategy as TwitchStrategy} from "passport-twitch-new"
 
 import indexTemplate from "./auth.hbs"
 
@@ -14,6 +14,8 @@ import indexTemplate from "./auth.hbs"
  * @typedef Options
  * @prop {string|string[]} scope
  * @prop {string} domain
+ * @prop {string} successRedirect
+ * @prop {string} failureRedirect
  */
 
 export default class TwitchAuthPlugin extends JaidCorePlugin {
@@ -44,9 +46,13 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
    */
   constructor(options = {}) {
     super()
+    /**
+     * @type {Options}
+     */
     this.options = {
       scope: [],
-      domain: null,
+      successRedirect: "back",
+      failureRedirect: "/",
       ...options,
     }
     if (isString(this.options.scope)) {
@@ -62,7 +68,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
       secretKeys: ["twitchClientSecret"],
       defaults: {
         twitchClientId: "ENTER",
-        twitchClientCallbackUrl: this.options.domain ? `https://${this.options.domain}/auth/twitch/callback` : "ENTER",
+        twitchClientCallbackUrl: `https://${this.options.domain}/auth/twitch/callback`,
       },
     }
   }
@@ -89,9 +95,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     const isNew = !twitchUser
     if (isNew) {
       this.log(`Login from new Twitch user ${profile.login}`)
-      const createTwitchUserResult = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
-      debugger
-      twitchUser = createTwitchUserResult.twitchUser
+      twitchUser = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
       await twitchUser.save()
     } else {
       this.log(`Login from existing Twitch user ${profile.login}`)
@@ -104,7 +108,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
       twitchUser,
       isNew,
     })
-    done()
+    done(null, twitchUser)
   }
 
   collectModels() {
@@ -130,16 +134,31 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
       callbackURL: this.callbackUrl,
     }, this.verify.bind(this))
     this.passport.use(strategy)
-    this.router = new Router
-    this.router.get("/auth", bodyparserMiddleware, context => {
+    this.passport.serializeUser((user, done) => {
+      done(null, user)
+    })
+    this.passport.deserializeUser((user, done) => {
+      done(null, user)
+    })
+    koa.use(this.passport.initialize())
+    const router = new Router
+    router.get("/auth", context => {
       context.type = "html"
       context.body = indexTemplate()
     })
-    this.router.get("/auth/twitch", bodyparserMiddleware, this.passport.authenticate("twitch"))
-    this.router.get("/auth/twitch/callback", bodyparserMiddleware, this.passport.authenticate("twitch", {failureRedirect: "/"}), context => {
-      context.body = "OK"
+    router.get("/auth/twitch", bodyparserMiddleware, this.passport.authenticate("twitch"))
+    router.get("/auth/twitch/callback", bodyparserMiddleware, this.passport.authenticate("twitch", {failureRedirect: this.options.failureRedirect}), async context => {
+      const twitchToken = context.state.user.TwitchTokens[0]
+      if (twitchToken) {
+        await this.core.database.models.TwitchLogin.create({
+          ip: context.ip,
+          userAgent: context.header["user-agent"],
+          TwitchTokenId: twitchToken.id,
+        })
+      }
+      context.redirect(this.options.successRedirect)
     })
-    koa.use(this.router.routes())
+    koa.use(router.routes())
   }
 
 }

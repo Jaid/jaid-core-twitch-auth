@@ -7,24 +7,17 @@ import Sequelize from "sequelize"
  */
 export default (Model, {models}) => {
 
-  class TwitchProfileChange extends Model {
+  class TwitchToken extends Model {
 
     /**
      * @param {Object<string, import("sequelize").Model>} models
      */
     static associate() {
-      TwitchProfileChange.belongsTo(models.TwitchUser, {
+      TwitchToken.belongsTo(models.TwitchUser, {
         foreignKey: {
           allowNull: false,
         },
       })
-    }
-
-    /**
-     * @return {string}
-     */
-    getTitle() {
-      return this.title
     }
 
   }
@@ -33,15 +26,17 @@ export default (Model, {models}) => {
    * @type {import("sequelize").ModelAttributes}
    */
   const schema = {
-    title: {
+    accessToken: {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    refreshToken: Sequelize.STRING,
+    expiryDate: Sequelize.DATE,
   }
 
   return {
-    default: TwitchProfileChange,
     schema,
+    default: TwitchToken,
   }
 
 }

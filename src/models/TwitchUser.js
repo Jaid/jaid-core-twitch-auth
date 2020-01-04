@@ -10,18 +10,18 @@ import twitchChatClient from "twitch-chat-client"
 
 /**
  * @param {typeof import("sequelize").Model} Model
- * @param {import("jaid-core").ModelDefinitionContext} context
+ * @param {import("jaid-core").ModelDefinitionContext & {parentPlugin: import("src").default}} context
  * @return {{default, schema}}
  */
-export default (Model, {parentPlugin, core}) => {
+export default (Model, {parentPlugin, models}) => {
 
   class TwitchUser extends Model {
 
     /**
      * @param {Object<string, import("sequelize").Model>} models
      */
-    static associate(models) {
-      TwitchUser.hasMany(models.TwitchLogin, {
+    static associate() {
+      TwitchUser.hasMany(models.TwitchToken, {
         foreignKey: {
           allowNull: false,
         },
@@ -30,24 +30,28 @@ export default (Model, {parentPlugin, core}) => {
 
     /**
      * @param {string} twitchId
+     * @param {import("sequelize").FindOptions} queryOptions
      * @return {Promise<TwitchUser>}
      */
-    static async findByTwitchId(twitchId) {
+    static async findByTwitchId(twitchId, queryOptions) {
       const user = await TwitchUser.findOne({
         where: {twitchId},
+        ...queryOptions,
       })
       return user
     }
 
     /**
-     * @param {string} twitchLogin
+     * @param {string} twitchToken
+     * @param {import("sequelize").FindOptions} queryOptions
      * @return {Promise<TwitchUser>}
      */
-    static async findByTwitchLogin(twitchLogin) {
+    static async findByTwitchToken(twitchToken, queryOptions) {
       const user = await TwitchUser.findOne({
         where: {
-          loginName: twitchLogin.toLowerCase(),
+          loginName: twitchToken.toLowerCase(),
         },
+        ...queryOptions,
       })
       return user
     }
@@ -66,32 +70,32 @@ export default (Model, {parentPlugin, core}) => {
     }
 
     /**
-     * @param {string} twitchLogin
+     * @param {string} twitchToken
      * @param {Object} [options]
      * @return {Promise<TwitchUser>}
      */
-    static async findOrRegisterByLogin(twitchLogin, options) {
+    static async findOrRegisterByLogin(twitchToken, options) {
       return TwitchUser.findOrRegister({
         ...options,
-        key: "twitchLogin",
-        value: twitchLogin,
+        key: "twitchToken",
+        value: twitchToken,
       })
     }
 
     /**
-     * @param {string} twitchLogin
+     * @param {string} twitchToken
      * @param {Object} [options]
      * @param {string[]} options.attributes
      * @param {Object<string, *>} options.defaults
-     * @param {"twitchLogin"|"twitchId"} [options.key="twitchLogin"]
+     * @param {"twitchToken"|"twitchId"} [options.key="twitchToken"]
      * @param {string} options.value
      * @return {Promise<TwitchUser>}
      */
-    static async findOrRegister({key = "twitchLogin", value, attributes, defaults}) {
+    static async findOrRegister({key = "twitchToken", value, attributes, defaults}) {
       const keyMeta = {
-        twitchLogin: {
+        twitchToken: {
           searchColumn: "loginName",
-          fetchUser: twitchLogin => twitchCore.getUserInfoByTwitchLogin(twitchLogin),
+          fetchUser: twitchToken => twitchCore.getUserInfoByTwitchToken(twitchToken),
         },
         twitchId: {
           searchColumn: "twitchId",
@@ -108,19 +112,19 @@ export default (Model, {parentPlugin, core}) => {
       const helixUser = await keyMeta[key].fetchUser(value)
       const login = helixUser.name.toLowerCase()
       const displayName = helixUser.displayName || login
-      if (key === "twitchLogin") {
+      if (key === "twitchToken") {
         const twitchUserWithSameId = await TwitchUser.findOne({
           where: {twitchId: helixUser.id},
         })
         if (twitchUserWithSameId) {
-          parentPlugin.logInfo("Twitch user #%s seems to have been renamed from %s to %s", twitchUserWithSameId.id, twitchUserWithSameId.loginName, value)
+          parentPlugin.log("Twitch user #%s seems to have been renamed from %s to %s", twitchUserWithSameId.id, twitchUserWithSameId.loginName, value)
           twitchUserWithSameId.loginName = value
           twitchUserWithSameId.displayName = displayName
           await twitchUserWithSameId.save()
           return twitchUserWithSameId
         }
       }
-      parentPlugin.logInfo("New Twitch user %s", displayName)
+      parentPlugin.log("New Twitch user %s", displayName)
       const isNameSlugUsed = await User.isSlugInUse(login)
       let newSlug = login
       if (isNameSlugUsed) {
@@ -147,57 +151,63 @@ export default (Model, {parentPlugin, core}) => {
     }
 
     /**
-     * @typedef {Object} CreateFromLoginResult
-     */
-
-    /**
      * @param {string} accessToken
      * @param {string} refreshToken
-     * @param {Object} profile
-     * @return {Promise<CreateFromLoginResult>}
+     * @param {import("@oauth-everything/passport-twitch").Profile} profile
+     * @return {Promise<TwitchUser>}
      */
     static async createFromLogin(accessToken, refreshToken, profile) {
+      // eslint-disable-next-line no-underscore-dangle
+      const rawProfile = profile._json.data[0]
       const twitchUser = await TwitchUser.create({
-        broadcasterType: profile.broadcaster_type,
-        description: profile.description,
-        displayName: profile.display_name,
+        broadcasterType: rawProfile.broadcaster_type,
+        description: profile.aboutMe,
+        displayName: profile.displayName,
         twitchId: profile.id,
-        loginName: profile.login,
-        offlineImageUrl: profile.offline_image_url,
-        avatarUrl: profile.profile_image_url,
-        viewCount: profile.view_count,
-        twitchLogins: [
+        loginName: profile.username,
+        offlineImageUrl: rawProfile.offline_image_url,
+        avatarUrl: rawProfile.profile_image_url,
+        viewCount: rawProfile.view_count,
+        TwitchTokens: [
           {
             accessToken,
             refreshToken,
           },
         ],
       }, {
-        include: core.database.models.TwitchLogin,
+        include: [
+          {
+            model: models.TwitchToken,
+            as: "TwitchTokens",
+          },
+        ],
       })
-      return {
-        twitchUser,
-      }
+      return twitchUser
     }
 
     /**
      * @return {Promise<import("twitch").default>}
      */
     async toTwitchClient() {
-      const client = await twitch.withCredentials(config.twitchClientId, this.accessToken, scope, {
-        clientSecret: config.twitchClientSecret,
-        refreshToken: this.refreshToken,
+      const twitchToken = await this.getToken()
+      if (!twitchToken) {
+        return null
+      }
+      const scope = parentPlugin.options.scope
+      const client = await twitch.withCredentials(parentPlugin.clientId, twitchToken.accessToken, scope, {
+        clientSecret: parentPlugin.clientSecret,
+        refreshToken: twitchToken.refreshToken,
+        expiry: twitchToken.expiryDate,
         onRefresh: accessToken => this.updateToken(accessToken),
-        expiry: this.tokenExpiryDate,
       }, {
         preAuth: true,
         initialScopes: scope,
       })
-      if (!this.tokenExpiryDate) {
-        parentPlugin.logInfo("Initial expiry date not set for user %s. Forcing access token refresh.", this.loginName)
+      if (!twitchToken.tokenExpiryDate) {
+        parentPlugin.log("Initial expiry date not set for user %s. Forcing access token refresh.", this.loginName)
         await client.refreshAccessToken()
       }
-      parentPlugin.logInfo("Created client for user %s", this.loginName)
+      parentPlugin.log("Created client for user %s", this.loginName)
       return client
     }
 
@@ -207,6 +217,9 @@ export default (Model, {parentPlugin, core}) => {
      */
     async toTwitchClientWithChat(connect = true) {
       const apiClient = await this.toTwitchClient()
+      if (!apiClient) {
+        return null
+      }
       const chatClient = await twitchChatClient.forTwitchClient(apiClient)
       if (connect) {
         await chatClient.connect()
@@ -219,17 +232,43 @@ export default (Model, {parentPlugin, core}) => {
     }
 
     /**
+     * @return {Promise<Object>}
+     */
+    async getToken() {
+      /**
+       * @type {import("sequelize").ModelCtor<{}>}
+       */
+      const TwitchToken = models.TwitchToken
+      const twitchToken = await TwitchToken.findOne({
+        where: {
+          TwitchUserId: this.id,
+        },
+        order: [["id", "DESC"]],
+        raw: true,
+        attributes: [
+          "accessToken",
+          "refreshToken",
+          "expiryDate",
+        ],
+      })
+      if (!twitchToken) {
+        return null
+      }
+      return twitchToken
+    }
+
+    /**
      * @param {import("twitch").AccessToken} token
+     * @param {import("sequelize").CreateOptions} queryOptions
      * @return {Promise<void>}
      */
-    async updateToken(token) {
-      parentPlugin.log("Refresh token of user %s", this.loginName)
-      this.accessToken = token.accessToken
-      this.refreshToken = token.refreshToken
-      this.tokenExpiryDate = token.expiryDate
-      await this.save({
-        fields: ["accessToken", "refreshToken", "tokenExpiryDate"],
-      })
+    async updateToken(token, queryOptions) {
+      await models.TwitchToken.create({
+        TwitchUserId: this.id,
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        expiryDate: token.expiryDate,
+      }, queryOptions)
     }
 
     /**
