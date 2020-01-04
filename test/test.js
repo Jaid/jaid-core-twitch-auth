@@ -3,6 +3,7 @@ import delay from "delay"
 import getPort from "get-port"
 import JaidCore from "jaid-core"
 import ms from "ms.macro"
+import open from "open"
 import path from "path"
 
 const indexModule = (process.env.MAIN ? path.resolve(process.env.MAIN) : path.join(__dirname, "..", "src")) |> require
@@ -62,6 +63,7 @@ it("should run", async () => {
     await core.close()
     return
   }
+  await open(`http://localhost:${insecurePort}/auth/twitch`)
   let loginCalled = false
   twitchAuthPlugin.eventEmitter.on("login", ({twitchUser, isNew}) => {
     expect(isNew).toBeTruthy()

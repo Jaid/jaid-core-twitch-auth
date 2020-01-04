@@ -5,10 +5,8 @@ import EventEmitter from "events"
 import {JaidCorePlugin} from "jaid-core"
 import koaBodyparser from "koa-bodyparser"
 import {KoaPassport} from "koa-passport"
-import {isFunction, isString} from "lodash"
+import {isString} from "lodash"
 import {Strategy as TwitchStrategy} from "passport-twitch-new"
-
-import TwitchUser from "src/models/TwitchUser"
 
 import indexTemplate from "./auth.hbs"
 
@@ -69,16 +67,9 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     }
   }
 
-  setCoreReference(core) {
-    /**
-     * @type {import("jaid-core").default}
-     */
-    this.core = core
-  }
-
   handleConfig(config) {
     this.clientId = config.twitchClientId
-    this.clientSecret = "***" || config.twitchClientSecret
+    this.clientSecret = config.twitchClientSecret
     this.callbackUrl = config.twitchClientCallbackUrl
   }
 
@@ -90,11 +81,16 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
    * @return {Promise<void>}
    */
   async verify(accessToken, refreshToken, profile, done) {
+    /**
+     * @type {import("./models/TwitchUser")}
+     */
+    const TwitchUser = this.core.database.models.TwitchUser
     let twitchUser = await TwitchUser.findByTwitchId(profile.id)
     const isNew = !twitchUser
     if (isNew) {
       this.log(`Login from new Twitch user ${profile.login}`)
       const createTwitchUserResult = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
+      debugger
       twitchUser = createTwitchUserResult.twitchUser
       await twitchUser.save()
     } else {
@@ -116,10 +112,8 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     const models = {}
     for (const entry of modelsRequire.keys()) {
       const modelName = entry.match(/\.\/(?<key>\w+)/).groups.key
-      const modelDefinition = require(`./models/${modelName}.js`)
-      models[modelName] = modelDefinition
+      models[modelName] = require(`./models/${modelName}.js`)
     }
-    debugger
     return models
   }
 
