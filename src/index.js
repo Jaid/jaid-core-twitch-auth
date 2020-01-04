@@ -5,11 +5,9 @@ import EventEmitter from "events"
 import {JaidCorePlugin} from "jaid-core"
 import koaBodyparser from "koa-bodyparser"
 import {KoaPassport} from "koa-passport"
-import {isString} from "lodash"
+import {isFunction, isString} from "lodash"
 import {Strategy as TwitchStrategy} from "passport-twitch-new"
 
-import TwitchLogin from "src/models/TwitchLogin"
-import TwitchProfileChange from "src/models/TwitchProfileChange"
 import TwitchUser from "src/models/TwitchUser"
 
 import indexTemplate from "./auth.hbs"
@@ -80,7 +78,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
 
   handleConfig(config) {
     this.clientId = config.twitchClientId
-    this.clientSecret = config.twitchClientSecret
+    this.clientSecret = "***" || config.twitchClientSecret
     this.callbackUrl = config.twitchClientCallbackUrl
   }
 
@@ -117,11 +115,11 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     const modelsRequire = require.context("./models/", false)
     const models = {}
     for (const entry of modelsRequire.keys()) {
-      const modelName = entry.match(/\.\/(?<key>[\da-z]+)/i).groups.key
-      const model = require(`./models/${modelName}.js`)
-      model.default.plugin = this
-      models[modelName] = model
+      const modelName = entry.match(/\.\/(?<key>\w+)/).groups.key
+      const modelDefinition = require(`./models/${modelName}.js`)
+      models[modelName] = modelDefinition
     }
+    debugger
     return models
   }
 

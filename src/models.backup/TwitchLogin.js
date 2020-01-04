@@ -8,6 +8,7 @@ export default Model => {
      * @param {Object<string, import("sequelize").Model>} models
      */
     static associate(models) {
+      debugger
       TwitchLogin.belongsTo(models.TwitchUser, {
         foreignKey: {
           allowNull: false,
