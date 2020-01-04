@@ -25,7 +25,7 @@
     "eslint-config-jaid": "^1.41.1",
     "get-port": "^5.1.0",
     "got": "^10.2.1",
-    "jaid-core": "^7.1.0",
+    "jaid-core": "^7.1.1",
     "jest": "^24.9.0",
     "koa": "^2.11.0",
     "ms.macro": "^2.0.0",
