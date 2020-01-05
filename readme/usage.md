@@ -2,4 +2,4 @@ Events:
 
 Event|When|Passed argumements
 ---|---
-login|A|`{twitchUser: TwitchUser, isNew: boolean}`
+login|When a user logged in with a web browser|`{twitchUser: TwitchUser, twitchToken: TwitchToken, isNew: boolean}`
