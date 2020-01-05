@@ -142,9 +142,10 @@ export default (Model, {parentPlugin, models}) => {
       // eslint-disable-next-line no-underscore-dangle
       const rawProfile = profile._json.data[0]
       return {
+        userType: rawProfile.type,
         broadcasterType: rawProfile.broadcaster_type,
         description: profile.aboutMe,
-        displayName: profile.displayName,
+        displayName: profile.displayName || profile.username,
         twitchId: profile.id,
         loginName: profile.username.toLowerCase(),
         offlineImageUrl: rawProfile.offline_image_url,
@@ -159,9 +160,10 @@ export default (Model, {parentPlugin, models}) => {
      */
     static getProfilePropertiesFromHelixUser(helixUser) {
       return {
+        userType: helixUser.type,
         broadcasterType: helixUser.broadcasterType,
         description: helixUser.description,
-        displayName: helixUser.displayName,
+        displayName: helixUser.displayName || helixUser.name,
         twitchId: helixUser.id,
         loginName: helixUser.name.toLowerCase(),
         offlineImageUrl: helixUser.offlinePlaceholderUrl,
@@ -315,21 +317,25 @@ export default (Model, {parentPlugin, models}) => {
    * @type {import("sequelize").ModelAttributes}
    */
   const schema = {
-    broadcasterType: Sequelize.STRING(16),
-    description: Sequelize.STRING,
+    broadcasterType: Sequelize.STRING(32),
+    userType: Sequelize.STRING(32),
+    description: Sequelize.TEXT,
     twitchId: {
       type: Sequelize.STRING(16),
       unique: true,
       allowNull: false,
     },
-    displayName: Sequelize.STRING(64),
+    displayName: {
+      allowNull: false,
+      type: Sequelize.STRING(64),
+    },
     loginName: {
       allowNull: false,
       unique: true,
       type: Sequelize.STRING(64),
     },
-    offlineImageUrl: Sequelize.TEXT,
-    avatarUrl: Sequelize.TEXT,
+    offlineImageUrl: Sequelize.STRING,
+    avatarUrl: Sequelize.STRING,
     viewCount: {
       allowNull: false,
       type: Sequelize.INTEGER,
