@@ -3,10 +3,12 @@
 import Router from "@koa/router"
 import {Strategy as TwitchStrategy} from "@oauth-everything/passport-twitch"
 import EventEmitter from "events"
+import hasContent from "has-content"
 import {JaidCorePlugin} from "jaid-core"
 import koaBodyparser from "koa-bodyparser"
 import {KoaPassport} from "koa-passport"
 import {isString} from "lodash"
+import twitch from "twitch"
 
 import indexTemplate from "./auth.hbs"
 
@@ -73,6 +75,11 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     }
   }
 
+  async init() {
+    this.apiClient = twitch.withClientCredentials(this.clientId, this.clientSecret)
+    await this.apiClient.refreshAccessToken()
+  }
+
   handleConfig(config) {
     this.clientId = config.twitchClientId
     this.clientSecret = config.twitchClientSecret
@@ -82,7 +89,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
   /**
    * @param {string} accessToken
    * @param {string} refreshToken
-   * @param {Object} profile
+   * @param {import("@oauth-everything/passport-twitch").Profile} profile
    * @param {Function} done
    * @return {Promise<void>}
    */
@@ -94,18 +101,24 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     let twitchUser = await TwitchUser.findByTwitchId(profile.id)
     const isNew = !twitchUser
     if (isNew) {
-      this.log(`Login from new Twitch user ${profile.login}`)
-      twitchUser = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
-      await twitchUser.save()
+      const createFromLoginResult = await TwitchUser.createFromLogin(accessToken, refreshToken, profile)
+      twitchUser = createFromLoginResult.twitchUser
+      twitchUser.twitchToken = createFromLoginResult.twitchToken
+      this.log(`Login from new Twitch user ${twitchUser.getDisplayName()}`)
     } else {
-      this.log(`Login from existing Twitch user ${profile.login}`)
-      await twitchUser.update({
-        accessToken,
-        refreshToken,
-      })
+      twitchUser.twitchToken = await twitchUser.createToken(accessToken, refreshToken)
+      const changes = await twitchUser.applyProfileChanges(profile)
+      if (hasContent(changes)) {
+        this.eventEmitter.emit("profileChanged", {
+          twitchUser,
+          isNew,
+        })
+      }
+      this.log(`Login from existing Twitch user ${twitchUser.getDisplayName()}`)
     }
     this.eventEmitter.emit("login", {
       twitchUser,
+      twitchToken: twitchUser.twitchToken,
       isNew,
     })
     done(null, twitchUser)
@@ -142,20 +155,19 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     })
     koa.use(this.passport.initialize())
     const router = new Router
+    const indexContent = indexTemplate()
     router.get("/auth", context => {
       context.type = "html"
-      context.body = indexTemplate()
+      context.body = indexContent
     })
     router.get("/auth/twitch", bodyparserMiddleware, this.passport.authenticate("twitch"))
     router.get("/auth/twitch/callback", bodyparserMiddleware, this.passport.authenticate("twitch", {failureRedirect: this.options.failureRedirect}), async context => {
-      const twitchToken = context.state.user.TwitchTokens[0]
-      if (twitchToken) {
-        await this.core.database.models.TwitchLogin.create({
-          ip: context.ip,
-          userAgent: context.header["user-agent"],
-          TwitchTokenId: twitchToken.id,
-        })
-      }
+      const twitchUser = context.state.user
+      await this.core.database.models.TwitchLogin.create({
+        ip: context.ip,
+        userAgent: context.header["user-agent"],
+        TwitchTokenId: twitchUser.twitchToken.id,
+      })
       context.redirect(this.options.successRedirect)
     })
     koa.use(router.routes())

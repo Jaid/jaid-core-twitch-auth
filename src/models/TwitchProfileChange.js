@@ -33,8 +33,8 @@ export default (Model, {models}) => {
    * @type {import("sequelize").ModelAttributes}
    */
   const schema = {
-    title: {
-      type: Sequelize.STRING,
+    payload: {
+      type: Sequelize.JSONB,
       allowNull: false,
     },
   }

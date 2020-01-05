@@ -1,3 +1,6 @@
+import hasContent from "has-content"
+import {omit} from "lodash"
+import objectChanges from "object-changes"
 import Sequelize from "sequelize"
 import twitch from "twitch"
 import twitchChatClient from "twitch-chat-client"
@@ -18,17 +21,6 @@ export default (Model, {parentPlugin, models}) => {
   class TwitchUser extends Model {
 
     /**
-     * @param {Object<string, import("sequelize").Model>} models
-     */
-    static associate() {
-      TwitchUser.hasMany(models.TwitchToken, {
-        foreignKey: {
-          allowNull: false,
-        },
-      })
-    }
-
-    /**
      * @param {string} twitchId
      * @param {import("sequelize").FindOptions} queryOptions
      * @return {Promise<TwitchUser>}
@@ -42,14 +34,14 @@ export default (Model, {parentPlugin, models}) => {
     }
 
     /**
-     * @param {string} twitchToken
+     * @param {string} twitchLogin
      * @param {import("sequelize").FindOptions} queryOptions
      * @return {Promise<TwitchUser>}
      */
-    static async findByTwitchToken(twitchToken, queryOptions) {
+    static async findByTwitchLogin(twitchLogin, queryOptions) {
       const user = await TwitchUser.findOne({
         where: {
-          loginName: twitchToken.toLowerCase(),
+          loginName: twitchLogin.toLowerCase(),
         },
         ...queryOptions,
       })
@@ -62,91 +54,63 @@ export default (Model, {parentPlugin, models}) => {
      * @return {Promise<TwitchUser>}
      */
     static async findOrRegisterById(twitchId, options) {
+      const profile = await parentPlugin.apiClient.helix.users.getUserById(twitchId)
       return TwitchUser.findOrRegister({
         ...options,
         key: "twitchId",
         value: twitchId,
+        profile,
       })
     }
 
     /**
-     * @param {string} twitchToken
+     * @param {string} loginName
      * @param {Object} [options]
      * @return {Promise<TwitchUser>}
      */
-    static async findOrRegisterByLogin(twitchToken, options) {
+    static async findOrRegisterByLogin(loginName, options) {
+      const helixUser = await parentPlugin.apiClient.helix.users.getUserByName(loginName)
       return TwitchUser.findOrRegister({
         ...options,
-        key: "twitchToken",
-        value: twitchToken,
+        key: "loginName",
+        value: loginName.toLowerCase(),
+        helixUser,
       })
     }
 
     /**
-     * @param {string} twitchToken
      * @param {Object} [options]
-     * @param {string[]} options.attributes
-     * @param {Object<string, *>} options.defaults
-     * @param {"twitchToken"|"twitchId"} [options.key="twitchToken"]
+     * @param {import("twitch").HelixUser} options.helixUser
+     * @param {"loginName"|"twitchId"} [options.key="twitchToken"]
      * @param {string} options.value
      * @return {Promise<TwitchUser>}
      */
-    static async findOrRegister({key = "twitchToken", value, attributes, defaults}) {
-      const keyMeta = {
-        twitchToken: {
-          searchColumn: "loginName",
-          fetchUser: twitchToken => twitchCore.getUserInfoByTwitchToken(twitchToken),
-        },
-        twitchId: {
-          searchColumn: "twitchId",
-          fetchUser: twitchId => twitchCore.getUserInfoByTwitchId(twitchId),
-        },
-      }
+    static async findOrRegister({key = "loginName", helixUser, value}) {
       const twitchUser = await TwitchUser.findOne({
-        where: {[keyMeta[key].searchColumn]: value},
-        attributes,
+        where: {[key]: value},
       })
+      const properties = TwitchUser.getProfilePropertiesFromHelixUser(helixUser)
       if (twitchUser) {
+        await twitchUser.applyChanges(properties)
         return twitchUser
       }
-      const helixUser = await keyMeta[key].fetchUser(value)
       const login = helixUser.name.toLowerCase()
       const displayName = helixUser.displayName || login
-      if (key === "twitchToken") {
-        const twitchUserWithSameId = await TwitchUser.findOne({
-          where: {twitchId: helixUser.id},
-        })
+      if (key === "loginName") {
+        const twitchUserWithSameId = await TwitchUser.findByTwitchId(helixUser.id)
         if (twitchUserWithSameId) {
-          parentPlugin.log("Twitch user #%s seems to have been renamed from %s to %s", twitchUserWithSameId.id, twitchUserWithSameId.loginName, value)
-          twitchUserWithSameId.loginName = value
-          twitchUserWithSameId.displayName = displayName
-          await twitchUserWithSameId.save()
+          parentPlugin.log(`Twitch user #${twitchUserWithSameId.id} seems to have been renamed from ${twitchUserWithSameId.loginName} to ${value}`)
+          properties.displayName = displayName
+          properties.loginName = value
+          await twitchUserWithSameId.applyChanges(properties)
           return twitchUserWithSameId
         }
       }
-      parentPlugin.log("New Twitch user %s", displayName)
-      const isNameSlugUsed = await User.isSlugInUse(login)
-      let newSlug = login
-      if (isNameSlugUsed) {
-        newSlug = shortid.generate()
-        parentPlugin.logWarn("Can not use %s for user slug, because is it already in use, using random slug %s instead", login, newSlug)
-      }
+      parentPlugin.log(`New Twitch user ${displayName}`)
       const newTwitchUser = await TwitchUser.create({
         displayName,
-        twitchId: helixUser.id,
-        description: helixUser.description,
-        loginName: login,
-        offlineImageUrl: helixUser.offlinePlaceholderUrl,
-        avatarUrl: helixUser.profilePictureUrl,
-        viewCount: helixUser.views,
-        broadcasterType: helixUser.broadcasterType,
-        User: {
-          title: displayName,
-          color: defaults?.nameColor,
-          slug: newSlug,
-        },
-        ...defaults,
-      }, {include: "User"})
+        ...properties,
+      })
       return newTwitchUser
     }
 
@@ -154,35 +118,63 @@ export default (Model, {parentPlugin, models}) => {
      * @param {string} accessToken
      * @param {string} refreshToken
      * @param {import("@oauth-everything/passport-twitch").Profile} profile
-     * @return {Promise<TwitchUser>}
+     * @return {Promise<Object>}
      */
     static async createFromLogin(accessToken, refreshToken, profile) {
+      const profileProperties = TwitchUser.getProfilePropertiesFromProfile(profile)
+      const twitchUser = await TwitchUser.create(profileProperties)
+      const twitchToken = await models.TwitchToken.create({
+        TwitchUserId: twitchUser.id,
+        accessToken,
+        refreshToken,
+      })
+      return {
+        twitchUser,
+        twitchToken,
+      }
+    }
+
+    /**
+     * @param {import("@oauth-everything/passport-twitch").Profile} profile
+     * @return {Object}
+     */
+    static getProfilePropertiesFromProfile(profile) {
       // eslint-disable-next-line no-underscore-dangle
       const rawProfile = profile._json.data[0]
-      const twitchUser = await TwitchUser.create({
+      return {
         broadcasterType: rawProfile.broadcaster_type,
         description: profile.aboutMe,
         displayName: profile.displayName,
         twitchId: profile.id,
-        loginName: profile.username,
+        loginName: profile.username.toLowerCase(),
         offlineImageUrl: rawProfile.offline_image_url,
         avatarUrl: rawProfile.profile_image_url,
         viewCount: rawProfile.view_count,
-        TwitchTokens: [
-          {
-            accessToken,
-            refreshToken,
-          },
-        ],
-      }, {
-        include: [
-          {
-            model: models.TwitchToken,
-            as: "TwitchTokens",
-          },
-        ],
-      })
-      return twitchUser
+      }
+    }
+
+    /**
+     * @param {import("twitch").HelixUser} helixUser
+     * @return {Object}
+     */
+    static getProfilePropertiesFromHelixUser(helixUser) {
+      return {
+        broadcasterType: helixUser.broadcasterType,
+        description: helixUser.description,
+        displayName: helixUser.displayName,
+        twitchId: helixUser.id,
+        loginName: helixUser.name.toLowerCase(),
+        offlineImageUrl: helixUser.offlinePlaceholderUrl,
+        avatarUrl: helixUser.profilePictureUrl,
+        viewCount: helixUser.views,
+      }
+    }
+
+    /**
+     * @return {Object}
+     */
+    getProfileProperties() {
+      return omit(this.dataValues, ["id", "createdAt", "updatedAt"])
     }
 
     /**
@@ -204,10 +196,10 @@ export default (Model, {parentPlugin, models}) => {
         initialScopes: scope,
       })
       if (!twitchToken.tokenExpiryDate) {
-        parentPlugin.log("Initial expiry date not set for user %s. Forcing access token refresh.", this.loginName)
+        parentPlugin.log(`Initial expiry date not set for user ${this.loginName}. Forcing access token refresh.`)
         await client.refreshAccessToken()
       }
-      parentPlugin.log("Created client for user %s", this.loginName)
+      parentPlugin.log(`Created client for user ${this.loginName}`)
       return client
     }
 
@@ -260,15 +252,54 @@ export default (Model, {parentPlugin, models}) => {
     /**
      * @param {import("twitch").AccessToken} token
      * @param {import("sequelize").CreateOptions} queryOptions
-     * @return {Promise<void>}
+     * @return {Promise<Object>}
      */
     async updateToken(token, queryOptions) {
-      await models.TwitchToken.create({
+      return models.TwitchToken.create({
         TwitchUserId: this.id,
         accessToken: token.accessToken,
         refreshToken: token.refreshToken,
         expiryDate: token.expiryDate,
       }, queryOptions)
+    }
+
+    /**
+     * @param {import("twitch").AccessToken} token
+     * @param {import("sequelize").CreateOptions} queryOptions
+     * @return {Promise<Object>}
+     */
+    async createToken(accessToken, refreshToken, queryOptions) {
+      return models.TwitchToken.create({
+        accessToken,
+        refreshToken,
+        TwitchUserId: this.id,
+      }, queryOptions)
+    }
+
+    /**
+     * @param {import("@oauth-everything/passport-twitch").Profile} profile
+     * @return {Promise<Object>}
+     */
+    async applyProfileChanges(profile) {
+      const newProperties = TwitchUser.getProfilePropertiesFromProfile(profile)
+      return this.applyChanges(newProperties)
+    }
+
+    /**
+     * @param {Object} newProperties
+     * @return {Promise<Object>}
+     */
+    async applyChanges(newProperties) {
+      const currentProperties = this.getProfileProperties()
+      const changes = objectChanges(currentProperties, newProperties)
+      if (hasContent(changes)) {
+        await this.update(changes)
+        await models.TwitchProfileChange.create({
+          payload: changes,
+          TwitchUserId: this.id,
+        })
+      }
+      return changes
     }
 
     /**
@@ -303,9 +334,6 @@ export default (Model, {parentPlugin, models}) => {
       allowNull: false,
       type: Sequelize.INTEGER,
     },
-    accessToken: Sequelize.STRING,
-    refreshToken: Sequelize.STRING,
-    tokenExpiryDate: Sequelize.DATE,
   }
 
   return {

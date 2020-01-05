@@ -64,14 +64,17 @@ it("should run", async () => {
     await core.close()
     return
   }
-  await open(`http://localhost:${insecurePort}/auth/twitch`)
+  const loginInChrome = async () => {
+    await open(`http://localhost:${insecurePort}/auth/twitch`)
+    await delay(ms`10 seconds`)
+  }
   let loginCalled = false
-  twitchAuthPlugin.eventEmitter.on("login", ({twitchUser, isNew}) => {
+  twitchAuthPlugin.eventEmitter.once("login", ({twitchUser, isNew}) => {
     expect(isNew).toBeTruthy()
     expect(twitchUser.displayName).toBe("Jaidchen")
     loginCalled = true
   })
-  await delay(ms`10 seconds`)
+  await loginInChrome()
   const [twitchUsers, twitchTokens, twitchLogins] = await Promise.all([
     core.database.models.TwitchUser.findAll(),
     core.database.models.TwitchToken.findAll(),
@@ -92,6 +95,18 @@ it("should run", async () => {
   const apiClient = await twitchUser.toTwitchClient()
   const profile = await apiClient.helix.users.getUserByName("jaidchen")
   expect(profile.displayName).toBe("Jaidchen")
+  await loginInChrome()
+  const helixUser = await apiClient.helix.users.getUserByName("jaidchen")
+  // eslint-disable-next-line no-underscore-dangle
+  helixUser._data.view_count = 3
+  const fetchedTwitchUser = await core.database.models.TwitchUser.findOrRegister({
+    key: "loginName",
+    value: "jaidchen",
+    helixUser,
+  })
+  expect(fetchedTwitchUser.getDisplayName()).toBe("Jaidchen")
+  const newTwitchUser = await core.database.models.TwitchUser.findOrRegisterByLogin("neydora")
+  expect(newTwitchUser.getDisplayName()).toBe("Neydora")
   await core.close()
   expect(loginCalled).toBeTruthy()
-}, ms`40 seconds`)
+}, ms`60 seconds`)
