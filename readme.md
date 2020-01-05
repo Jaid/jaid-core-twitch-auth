@@ -3,36 +3,40 @@
 
 jaid-core plugin for TwitchTV based logins.
 
+<a href="https://raw.githubusercontent.com/Jaid/jaid-core-twitch-auth/master/license.txt"><img src="https://img.shields.io/github/license/Jaid/jaid-core-twitch-auth?style=flat-square&color=success" alt="License"/></a>  
+<a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/commits-since/Jaid/jaid-core-twitch-auth/v0.1.0?style=flat-square&logo=github&color=success" alt="Commits since v0.1.0"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/last-commit/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github&color=red" alt="Last commit"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/issues"><img src="https://img.shields.io/github/issues/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github&color=red" alt="Issues"/></a>  
+<a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/v/jaid-core-twitch-auth?style=flat-square&logo=npm&label=latest%20version&color=success" alt="Latest version on npm"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/network/dependents"><img src="https://img.shields.io/librariesio/dependents/npm/jaid-core-twitch-auth?style=flat-square&logo=npm&color=red" alt="Dependents"/></a> <a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/dm/jaid-core-twitch-auth?style=flat-square&logo=npm&color=red" alt="Downloads"/></a>
+
+
+
+
+
+## Usage
+
+Events:
+
+Event|When|Passed argumements
+---|---
+login|When a user logged in with a web browser|`{twitchUser: TwitchUser, twitchToken: TwitchToken, isNew: boolean}`
+
+
+
 ## Installation
-<a href='https://npmjs.com/package/jaid-core-twitch-auth'><img alt='npm logo' src='https://github.com/Jaid/action-readme/raw/master/images/base-assets/npm.png'/></a>
+<a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/badge/npm-jaid--core--twitch--auth-C23039?style=flat-square&logo=npm" alt="jaid-core-twitch-auth on npm"/></a>
 ```bash
 npm install --save jaid-core-twitch-auth@^0.1.0
 ```
-<a href='https://yarnpkg.com/package/jaid-core-twitch-auth'><img alt='Yarn logo' src='https://github.com/Jaid/action-readme/raw/master/images/base-assets/yarn.png'/></a>
+<a href="https://yarnpkg.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/badge/Yarn-jaid--core--twitch--auth-2F8CB7?style=flat-square&logo=yarn&logoColor=white" alt="jaid-core-twitch-auth on Yarn"/></a>
 ```bash
 yarn add jaid-core-twitch-auth@^0.1.0
 ```
 
 
 
-## Documentation
-**Kind**: Exported function  
-**Returns**: <code>number</code> - Seconds passed since Unix epoch (01 January 1970)  
 
-| Param | Type |
-| --- | --- |
-| [compareValue] | <code>number</code> | 
 
-**Example**  
-```javascript
-import jaidCoreTwitchAuth from "jaid-core-twitch-auth"
-const result = jaidCoreTwitchAuth()
-result === 1549410770
-setTimeout(() => {
-  const result2 = jaidCoreTwitchAuth(result)
-  result2 === 3
-}, 3000)
-```
+
+
 
 
 ## License
