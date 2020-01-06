@@ -16,7 +16,7 @@ it("should run", async () => {
   let authHomepageResponse
   const insecurePort = 51402
   const twitchAuthPlugin = new Plugin({
-    failureRedirect: "/failure",
+    defaultBaseUrl: `http://localhost:${insecurePort}`,
   })
   const core = new JaidCore({
     insecurePort,
@@ -26,13 +26,9 @@ it("should run", async () => {
     useGot: true,
     sqlite: true,
   })
-  const configFile = path.join(core.appFolder, "config.yml")
-  await fsp.writeYaml(configFile, {
-    twitchClientId: process.env.jaidCoreTwitchAuthClientId || "UNSET",
-    twitchClientCallbackUrl: `http://localhost:${insecurePort}/auth/twitch/callback`,
-  })
   const secretsFile = path.join(core.appFolder, "secrets.yml")
   await fsp.writeYaml(secretsFile, {
+    twitchClientId: process.env.jaidCoreTwitchAuthClientId || "UNSET",
     twitchClientSecret: process.env.jaidCoreTwitchAuthClientSecret || "UNSET",
   })
   const testClientClass = class {

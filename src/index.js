@@ -15,9 +15,7 @@ import indexTemplate from "./auth.hbs"
 /**
  * @typedef Options
  * @prop {string|string[]} scope
- * @prop {string} domain
- * @prop {string} successRedirect
- * @prop {string} failureRedirect
+ * @prop {string} [defaultBaseUrl = http://localhost]
  */
 
 export default class TwitchAuthPlugin extends JaidCorePlugin {
@@ -63,8 +61,7 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
      */
     this.options = {
       scope: [],
-      successRedirect: "back",
-      failureRedirect: "/",
+      defaultBaseUrl: "http://localhost",
       ...options,
     }
     if (isString(this.options.scope)) {
@@ -82,9 +79,9 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
         "twitchClientSecret",
       ],
       defaults: {
-        twitchClientCallbackUrl: `https://${this.options.domain}/auth/twitch/callback`,
+        twitchClientCallbackUrl: `${this.options.defaultBaseUrl}/auth/twitch/callback`,
         twitchAuthSuccessRedirect: "back",
-        twitchAuthFailureRedirect: `https://${this.options.domain}`,
+        twitchAuthFailureRedirect: `${this.options.defaultBaseUrl}`,
       },
     }
   }
