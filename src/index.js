@@ -43,6 +43,16 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
   eventEmitter = new EventEmitter
 
   /**
+   * @type {string}
+   */
+  successRedirectUrl = null
+
+  /**
+   * @type {string}
+   */
+  failureRedirectUrl = null
+
+  /**
    * @constructor
    * @param {Options} options
    */
@@ -73,6 +83,8 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
       ],
       defaults: {
         twitchClientCallbackUrl: `https://${this.options.domain}/auth/twitch/callback`,
+        twitchAuthSuccessRedirect: "back",
+        twitchAuthFailureRedirect: `https://${this.options.domain}`,
       },
     }
   }
@@ -85,6 +97,8 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
     this.clientId = config.twitchClientId
     this.clientSecret = config.twitchClientSecret
     this.callbackUrl = config.twitchClientCallbackUrl
+    this.successRedirectUrl = config.twitchAuthSuccessRedirect
+    this.failureRedirectUrl = config.twitchAuthFailureRedirect
   }
 
   /**
@@ -162,14 +176,14 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
       context.body = indexContent
     })
     router.get("/auth/twitch", bodyparserMiddleware, this.passport.authenticate("twitch"))
-    router.get("/auth/twitch/callback", bodyparserMiddleware, this.passport.authenticate("twitch", {failureRedirect: this.options.failureRedirect}), async context => {
+    router.get("/auth/twitch/callback", bodyparserMiddleware, this.passport.authenticate("twitch", {failureRedirect: this.failureRedirectUrl}), async context => {
       const twitchUser = context.state.user
       await this.core.database.models.TwitchLogin.create({
         ip: context.ip,
         userAgent: context.header["user-agent"],
         TwitchTokenId: twitchUser.twitchToken.id,
       })
-      context.redirect(this.options.successRedirect)
+      context.redirect(this.successRedirectUrl)
     })
     koa.use(router.routes())
   }
