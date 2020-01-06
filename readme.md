@@ -1,11 +1,14 @@
 # jaid-core-twitch-auth
 
 
-jaid-core plugin for TwitchTV based logins.
+<a href="https://actions-badge.atrox.dev/Jaid/jaid-core-twitch-auth/goto"><img src="https://img.shields.io/endpoint.svg?style=flat-square&url=https%3A%2F%2Factions-badge.atrox.dev%2FJaid%2Fjaid-core-twitch-auth%2Fbadge" alt="Build status"/></a> <a href="https://raw.githubusercontent.com/Jaid/jaid-core-twitch-auth/master/license.txt"><img src="https://img.shields.io/github/license/Jaid/jaid-core-twitch-auth?style=flat-square" alt="License"/></a>  
+<a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/commits-since/Jaid/jaid-core-twitch-auth/v2.0.0?style=flat-square&logo=github" alt="Commits since v2.0.0"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/last-commit/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github" alt="Last commit"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/issues"><img src="https://img.shields.io/github/issues/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github" alt="Issues"/></a>  
+<a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/v/jaid-core-twitch-auth?style=flat-square&logo=npm&label=latest%20version" alt="Latest version on npm"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/network/dependents"><img src="https://img.shields.io/librariesio/dependents/npm/jaid-core-twitch-auth?style=flat-square&logo=npm" alt="Dependents"/></a> <a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/dm/jaid-core-twitch-auth?style=flat-square&logo=npm" alt="Downloads"/></a>
 
-<a href="https://raw.githubusercontent.com/Jaid/jaid-core-twitch-auth/master/license.txt"><img src="https://img.shields.io/github/license/Jaid/jaid-core-twitch-auth?style=flat-square&color=success" alt="License"/></a>  
-<a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/commits-since/Jaid/jaid-core-twitch-auth/v2.0.0?style=flat-square&logo=github&color=success" alt="Commits since v2.0.0"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/commits"><img src="https://img.shields.io/github/last-commit/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github&color=red" alt="Last commit"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/issues"><img src="https://img.shields.io/github/issues/Jaid/jaid-core-twitch-auth?style=flat-square&logo=github&color=red" alt="Issues"/></a>  
-<a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/v/jaid-core-twitch-auth?style=flat-square&logo=npm&label=latest%20version&color=success" alt="Latest version on npm"/></a> <a href="https://github.com/Jaid/jaid-core-twitch-auth/network/dependents"><img src="https://img.shields.io/librariesio/dependents/npm/jaid-core-twitch-auth?style=flat-square&logo=npm&color=red" alt="Dependents"/></a> <a href="https://npmjs.com/package/jaid-core-twitch-auth"><img src="https://img.shields.io/npm/dm/jaid-core-twitch-auth?style=flat-square&logo=npm&color=red" alt="Downloads"/></a>
+**jaid-core plugin for TwitchTV based logins.**
+
+
+
 
 
 
@@ -16,7 +19,7 @@ jaid-core plugin for TwitchTV based logins.
 Events:
 
 Event|When|Passed argumements
----|---
+---|---|---
 login|When a user logged in with a web browser|`{twitchUser: TwitchUser, twitchToken: TwitchToken, isNew: boolean}`
 
 
@@ -37,6 +40,24 @@ yarn add jaid-core-twitch-auth@^2.0.0
 
 
 
+## Development
+
+
+
+Setting up:
+```bash
+git clone git@github.com:Jaid/jaid-core-twitch-auth.git
+cd jaid-core-twitch-auth
+npm install
+```
+Testing:
+```bash
+npm run test:dev
+```
+Testing in production environment:
+```bash
+npm run test
+```
 
 
 ## License
