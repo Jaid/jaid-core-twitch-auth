@@ -28,12 +28,12 @@ it("should run", async () => {
   })
   const configFile = path.join(core.appFolder, "config.yml")
   await fsp.writeYaml(configFile, {
-    twitchClientId: process.env.jaidCoreTwitchAuthClientId || false,
+    twitchClientId: process.env.jaidCoreTwitchAuthClientId || "",
     twitchClientCallbackUrl: `http://localhost:${insecurePort}/auth/twitch/callback`,
   })
   const secretsFile = path.join(core.appFolder, "secrets.yml")
   await fsp.writeYaml(secretsFile, {
-    twitchClientSecret: process.env.jaidCoreTwitchAuthClientSecret || false,
+    twitchClientSecret: process.env.jaidCoreTwitchAuthClientSecret || "",
   })
   const testClientClass = class {
 
