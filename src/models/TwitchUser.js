@@ -1,5 +1,5 @@
 import hasContent from "has-content"
-import {omit} from "lodash"
+import {omit, pick} from "lodash"
 import objectChanges from "object-changes"
 import Sequelize from "sequelize"
 import twitch from "twitch"
@@ -297,7 +297,8 @@ export default (Model, {parentPlugin, models}) => {
       if (hasContent(changes)) {
         await this.update(changes)
         await models.TwitchProfileChange.create({
-          payload: changes,
+          newValues: changes,
+          previousValues: pick(currentProperties, Object.keys(changes)),
           TwitchUserId: this.id,
         })
       }

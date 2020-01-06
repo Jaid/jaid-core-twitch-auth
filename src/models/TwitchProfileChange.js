@@ -33,7 +33,11 @@ export default (Model, {models}) => {
    * @type {import("sequelize").ModelAttributes}
    */
   const schema = {
-    payload: {
+    previousValues: {
+      type: Sequelize.JSONB,
+      allowNull: false,
+    },
+    newValues: {
       type: Sequelize.JSONB,
       allowNull: false,
     },
