@@ -77,7 +77,6 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
 
   async init() {
     this.apiClient = twitch.withClientCredentials(this.clientId, this.clientSecret)
-    await this.apiClient.refreshAccessToken()
   }
 
   handleConfig(config) {
