@@ -67,9 +67,11 @@ export default class TwitchAuthPlugin extends JaidCorePlugin {
    */
   getConfigSetup = () => {
     return {
-      secretKeys: ["twitchClientSecret"],
+      secretKeys: [
+        "twitchClientId",
+        "twitchClientSecret",
+      ],
       defaults: {
-        twitchClientId: "ENTER",
         twitchClientCallbackUrl: `https://${this.options.domain}/auth/twitch/callback`,
       },
     }
