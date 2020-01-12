@@ -5,7 +5,7 @@
   "version": "4.0.0",
   "author": "Jaid <jaid.jsx@gmail.com> (https://github.com/Jaid)",
   "dependencies": {
-    "@babel/runtime": "^7.7.7",
+    "@babel/runtime": "^7.8.0",
     "@koa/router": "^8.0.5",
     "@oauth-everything/passport-twitch": "^1.0.3",
     "koa-bodyparser": "^4.2.1",
@@ -18,12 +18,12 @@
   "devDependencies": {
     "acorn": "^7.1.0",
     "babel-jest": "^24.9.0",
-    "babel-preset-jaid": "^7.3.0",
+    "babel-preset-jaid": "^7.3.1",
     "browserslist-config-jaid-node": "^2.2.2",
     "delay": "^4.3.0",
     "eslint": "^6.8.0",
-    "eslint-config-jaid": "^1.41.1",
-    "got": "^10.2.1",
+    "eslint-config-jaid": "^1.42.0",
+    "got": "^10.2.2",
     "jaid-core": "^7.3.2",
     "jest": "^24.9.0",
     "koa": "^2.11.0",
@@ -33,7 +33,7 @@
     "rimraf": "^3.0.0",
     "sequelize": "^5.21.3",
     "sqlite3": "^4.1.1",
-    "webpack-config-jaid": "^9.3.1"
+    "webpack-config-jaid": "^11.0.0"
   },
   "scripts": {
     "clean": "rimraf dist/",
