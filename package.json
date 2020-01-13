@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "jaid-core-twitch-auth",
   "webpackConfigJaid": "nodeClass",
   "version": "4.0.0",
