@@ -49,5 +49,9 @@
     "prepareActionJest": "npm run build:prod"
   },
   "description": "jaid-core plugin for TwitchTV based logins.",
-  "funding": "https://github.com/sponsors/jaid"
+  "funding": "https://github.com/sponsors/jaid",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaid/jaid-core-twitch-auth"
+  }
 }
